@@ -1,87 +1,59 @@
 #!/usr/bin/python3
 
 # Getting all the Required Libraries
-import numpy as np
-import pandas as pd
+from sklearn import preprocessing
 from sklearn.model_selection import train_test_split 
-from sklearn.ensemble import GradientBoostingRegressor
-import joblib
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import r2_score
+from sklearn.metrics import confusion_matrix
+import pandas as pd
+import psycopg2 as pg
 
 # Getting the Dataset into the Program
-original = pd.read_csv('dataset.csv')
+engine = pg.connect("dbname='Research' user='postgres' host='localhost' port='5432' password='React123123'")
+df_original = pd.read_sql('select * from t_posts', con=engine)
+df_train = df_original.copy()
+# df_train = df_train[df_train['forums_id']==34]
 
-'''
-Since the Dataset has many Null Values in the 'Volumes' Column.
-Null Values will be predicted taking Target Variable as a Feature.
-Volumes Prediction (Column with Null Values)
-'''
+# # Using Lable Encoder to Create Categorical Values out of Numerical Ones
+# forums_encoder = preprocessing.LabelEncoder()
+# forums_encoder.fit(list(df_train['forums_id']))
+# users_encoder = preprocessing.LabelEncoder()
+# users_encoder.fit(list(df_train['users_id']))
+# topics_encoder = preprocessing.LabelEncoder()
+# topics_encoder.fit(list(df_train['topics_id']))
 
-# Dataset Used is the Raw Dataset
-df_train = original.copy()
+# # Replacing Encoded Values with Original Values in the DataFrame
+# df_train['forums_id'].replace(list(forums_encoder.transform(list(df_train['forums_id']))) , inplace = True)
+# df_train['users_id'].replace(list(users_encoder.transform(list(df_train['users_id']))) , inplace = True)
+# df_train['topics_id'].replace(list(topics_encoder.transform(list(df_train['topics_id']))) , inplace = True)
 
-# Normalizing Outliser using Z-Score
-df_train['lsg_4'] = (df_train['lsg_4'] - df_train['lsg_4'].mean()) / df_train['lsg_4'].std()
-df_train['lsg_4'] = np.c_[np.ones(df_train['lsg_4'].shape[0]), df_train['lsg_4']] 
+# # Identifing Features and Target Variable
+# features = ['topics_id' , 'users_id']
+# target = 'forums_id'
 
-# Identifing Features and Target Variable
-features = ['price', 'gift_type', 'gift_category', 'gift_cluster', 'lsg_1', 'lsg_2', 'lsg_3','lsg_4', 'lsg_5', 'lsg_6', 'is_discounted']
-target = 'volumes'
+# # Slicing the Data Frame to create Model
+# m = df_train[['forums_id' , 'users_id' , 'topics_id']]
+# d = m.dropna()
 
-# Slicing the Data Frame to create Model
-m = df_train[['volumes', 'price', 'gift_type', 'gift_category', 'gift_cluster', 'lsg_1', 'lsg_2', 'lsg_3','lsg_4', 'lsg_5', 'lsg_6', 'is_discounted']]
-d = m.dropna()
+# # Data to Train the Model
+# X = d.drop(columns = [target], axis = 1)
+# Y = d[target]
 
-# Data to Train the Model
-X = d.drop(columns = [target], axis = 1)
-Y = d[target]
+# # Splitting the Data
+# X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3, random_state = 0)
 
-# Splitting the Data
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3, random_state = 0)
+# # Creating the Model (Optimised)
+# model = RandomForestClassifier(max_depth=2, random_state=0)
+# model.fit(X_train,Y_train)
+# Y_pred = model.predict(X_test)
+# conf = round((r2_score(Y_test,Y_pred))*100,3)
 
-# Creating the Model (Optimised)
-model = GradientBoostingRegressor(n_estimators = 120 , random_state = 2 , learning_rate = 0.378 , max_depth = 5)
+# # Printing Confidence of Our Model
+# print('Model Confidence : ' , conf)
+# print('Confusion Matrix : \n' , confusion_matrix(Y_test, Y_pred))
 
-# Dividing the Dataframe to Impute predicted Null Values
-df_train = original.copy()
-test  = pd.DataFrame(df_train[df_train[target].isnull()])
-df_train.dropna(inplace = True)
+# # # Model exported ad a Pickle File 
+# # joblib.dump(model, 'Model.pkl')
 
-# Predicting Null Values in the 'Volumes' Column
-predictions = finalmodel.predict(test[features])
-
-# Imputing Predicted Null Values in the Dataset
-test[target] = predictions
-frame = [df_train, test]
-
-# New Dataset with Predicted Null Values is Ready
-final = pd.concat(frame)
-
-'''
-Since Null Valies have been predicted with High Accuracy,
-We now have more data to train our Model.
-Price Prediction (Original Target Variable)
-'''
-
-# Dataset Used is the one with Predicted Null Values
-df_train = final.copy()
-
-# Identifing Features and Target Variable
-features = ['volumes', 'gift_type', 'gift_category', 'gift_cluster', 'lsg_1', 'lsg_2', 'lsg_3','lsg_4', 'lsg_5', 'lsg_6', 'is_discounted']
-target = 'price'
-
-# Slicing the Data Frame to create Model
-m = df_train[['volumes', 'price', 'gift_type', 'gift_category', 'gift_cluster', 'lsg_1', 'lsg_2', 'lsg_3','lsg_4', 'lsg_5', 'lsg_6', 'is_discounted']]
-d = m.dropna()
-
-# Data to Train the Model
-X = d.drop(columns = [target], axis = 1)
-Y = d[target]
-
-# Splitting the Data
-X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.3, random_state=1)
-
-# Creating the Model (Optimised)
-model = GradientBoostingRegressor(n_estimators=135 , random_state=18 , learning_rate=0.359 , max_depth = 3)
-
-# Model exported ad a Pickle File 
-joblib.dump(price_model, 'BestPrice.pkl')
+df_original.to_csv('Dataset.csv')
